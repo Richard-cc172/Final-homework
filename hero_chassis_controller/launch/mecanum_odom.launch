@@ -1,0 +1,7 @@
+<launch>
+  <!-- 加载机器人参数 -->
+  <rosparam file="$(find hero_chassis_controller)/config/chassis_params.yaml" command="load"/>
+
+  <!-- 启动麦克纳姆轮里程计节点 -->
+  <node name="mecanum_odom_publisher" pkg="hero_chassis_controller" type="mecanum_odom_publisher_node" output="screen"/>
+</launch>

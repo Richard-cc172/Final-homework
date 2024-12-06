@@ -1,0 +1,5 @@
+<launch>
+    <rosparam file="$(find hero_chassis_controller)/config/speed_mode.yaml" command="load"/>
+
+    <node pkg="hero_chassis_controller" type="velocity_transform_node" name="velocity_transform_node" output="screen"/>
+</launch>

@@ -1,0 +1,16 @@
+hero_chassis_controller:
+  type: "hero_chassis_controller/HeroChassisController"
+  joints:
+    - left_front_wheel_joint
+    - right_front_wheel_joint
+    - left_back_wheel_joint
+    - right_back_wheel_joint
+  pid:
+    p: 1.0
+    i: 0.1
+    d: 0.01
+    i_clamp: 1.0
+
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50

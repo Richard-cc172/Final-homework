@@ -1,0 +1,4 @@
+chassis_params:
+  wheel_radius: 0.07625   # 轮子半径 (m)
+  wheel_base: 0.4         # 轴距 (前后轮间距, m)
+  wheel_track: 0.4        # 轮距 (左右轮间距, m)
