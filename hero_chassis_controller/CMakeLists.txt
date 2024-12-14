@@ -93,23 +93,12 @@ add_library(${PROJECT_NAME}
 )
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_14)
 
+add_executable(keyboard_control_node src/keyboard_control_node.cpp)
+
+target_link_libraries(keyboard_control_node ${catkin_LIBRARIES})
+
 ## Declare cpp executables
 
-add_executable(chassis_controller_node
-        src/chassis_controller.cpp
-        src/chassis_controller_node.cpp
-)
-target_link_libraries(chassis_controller_node
-        ${catkin_LIBRARIES}
-        yaml-cpp
-)
-
-add_executable(mecanum_odom_publisher_node
-        src/mecanum_odom_publisher_node.cpp
-)
-target_link_libraries(mecanum_odom_publisher_node
-        ${catkin_LIBRARIES}
-)
 
 add_executable(velocity_transform_node
         src/velocity_transform_node.cpp
@@ -161,8 +150,9 @@ install(FILES plugin_description.xml
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} velocity_transform_node
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 #############

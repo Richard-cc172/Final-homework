@@ -4,6 +4,9 @@
 
 namespace hero_chassis_controller {
 
+// 构造函数
+HeroChassisController::HeroChassisController() : current_velocities_(4, 0.0) {}
+
 bool HeroChassisController::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh) {
  // 初始化 wheel_controllers_
     wheel_controllers_.resize(4);  // 确保有4个PID控制器
@@ -44,15 +47,44 @@ if (!root_nh.getParam("chassis_params/wheel_track", wheel_track_)) {
     controller_nh.param("pid/d", d, 0.01);
     controller_nh.param("pid/i_clamp", i_clamp, 1.0);
 
-    for (auto& pid : wheel_controllers_) {
-        pid.initPid(p, i, d, i_clamp, -i_clamp);
-    }
 
     // 设置动态参数服务器
-    dynamic_reconfigure_server_ = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::PIDConfig>>(controller_nh);
+  dynamic_reconfigure_server_ = std::make_shared<dynamic_reconfigure::Server<hero_chassis_controller::PIDConfig>>(
+  dynamic_reconfigure_mutex_, controller_nh);
+
     if (!dynamic_reconfigure_server_) {
-    ROS_ERROR("Failed to initialize dynamic reconfigure server.");
-    return false;
+      ROS_ERROR("Failed to initialize dynamic reconfigure server.");
+      return false;
+    }
+
+    // 更新动态重配置的默认值
+    hero_chassis_controller::PIDConfig default_config;
+
+    // 从参数服务器读取值
+    if (!controller_nh.getParam("pid/p", default_config.p)) {
+      ROS_WARN("Parameter pid/p not found, using default.");
+      default_config.p = 1.0;
+    }
+    if (!controller_nh.getParam("pid/i", default_config.i)) {
+      ROS_WARN("Parameter pid/i not found, using default.");
+      default_config.i = 0.1;
+    }
+    if (!controller_nh.getParam("pid/d", default_config.d)) {
+      ROS_WARN("Parameter pid/d not found, using default.");
+      default_config.d = 0.01;
+    }
+    if (!controller_nh.getParam("pid/i_clamp", default_config.i_clamp)) {
+      ROS_WARN("Parameter pid/i_clamp not found, using default.");
+      default_config.i_clamp = 1.0;
+    }
+
+    dynamic_reconfigure_server_->updateConfig(default_config); // 更新动态参数服务器的值
+    ROS_INFO("Updated dynamic reconfigure defaults: P=%.2f, I=%.2f, D=%.2f, I_clamp=%.2f",
+       default_config.p, default_config.i, default_config.d, default_config.i_clamp);
+
+
+    for (auto& pid : wheel_controllers_) {
+      pid.initPid(p, i, d, i_clamp, -i_clamp);
     }
 
     dynamic_reconfigure::Server<hero_chassis_controller::PIDConfig>::CallbackType cb = boost::bind(&HeroChassisController::dynamicReconfigureCallback, this, _1, _2);
@@ -61,7 +93,7 @@ if (!root_nh.getParam("chassis_params/wheel_track", wheel_track_)) {
     // 订阅 /cmd_vel 和 /joint_states 话题
     //将订阅的话题从 /cmd_vel 改为 /transformed_cmd_vel
     cmd_vel_sub_ = root_nh.subscribe<geometry_msgs::Twist>("/transformed_cmd_vel", 10, &HeroChassisController::cmdVelCallback, this);
-
+	ROS_INFO("Subscribed to /transformed_cmd_vel");
     joint_states_sub_ = root_nh.subscribe<sensor_msgs::JointState>("/joint_states", 10, &HeroChassisController::jointStatesCallback, this);
 
     ROS_INFO("HeroChassisController initialized successfully.");
@@ -69,7 +101,12 @@ if (!root_nh.getParam("chassis_params/wheel_track", wheel_track_)) {
 }
 
 void HeroChassisController::update(const ros::Time& time, const ros::Duration& period) {
-    // 计算目标速度
+	if (wheel_base_ <= 0 || wheel_track_ <= 0 || wheel_radius_ <= 0) {
+        ROS_ERROR("Invalid chassis parameters.");
+        return;
+    }
+
+  // 计算目标速度
     double vx = current_cmd_.linear.x;
     double vy = current_cmd_.linear.y;
     double omega = current_cmd_.angular.z;
@@ -97,7 +134,13 @@ void HeroChassisController::update(const ros::Time& time, const ros::Duration& p
 }
 
 void HeroChassisController::dynamicReconfigureCallback(hero_chassis_controller::PIDConfig& config, uint32_t level) {
-    for (auto& pid : wheel_controllers_) {
+  boost::recursive_mutex::scoped_lock lock(dynamic_reconfigure_mutex_); // 使用 boost::recursive_mutex 的锁
+
+  if (config.p < 0 || config.i < 0 || config.d < 0) {
+        ROS_WARN("Invalid PID parameters: P=%.2f, I=%.2f, D=%.2f", config.p, config.i, config.d);
+        return;
+    }
+  	for (auto& pid : wheel_controllers_) {
         pid.setGains(config.p, config.i, config.d, config.i_clamp, -config.i_clamp);
     }
     ROS_INFO("Dynamic reconfigure updated: P=%.2f, I=%.2f, D=%.2f, I_clamp=%.2f",
@@ -110,7 +153,10 @@ void HeroChassisController::cmdVelCallback(const geometry_msgs::Twist::ConstPtr&
         return;
     }
     current_cmd_ = *msg;
+    ROS_INFO("Received transformed_cmd_vel: linear.x=%.2f, linear.y=%.2f, angular.z=%.2f",
+             msg->linear.x, msg->linear.y, msg->angular.z);
 }
+
 
 void HeroChassisController::jointStatesCallback(const sensor_msgs::JointState::ConstPtr& msg) {
    if (!msg) {
@@ -128,9 +174,8 @@ void HeroChassisController::jointStatesCallback(const sensor_msgs::JointState::C
             current_velocities_[3] = msg->velocity[i];
         }
     }
-}
-
-}  // namespace hero_chassis_controller
+   }
+}// namespace hero_chassis_controller
 
 // 注册控制器插件
 PLUGINLIB_EXPORT_CLASS(hero_chassis_controller::HeroChassisController, controller_interface::ControllerBase)

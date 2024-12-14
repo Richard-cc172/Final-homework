@@ -1,5 +1,0 @@
-hero_chassis_controller/PIDConfig:
-  p: 1.0
-  i: 0.1
-  d: 0.01
-  i_clamp: 1.0

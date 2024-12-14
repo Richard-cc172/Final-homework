@@ -8,17 +8,21 @@
 #include <hero_chassis_controller/PIDConfig.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/JointState.h>
+#include <boost/thread/recursive_mutex.hpp>
 
 
 namespace hero_chassis_controller {
 
 class HeroChassisController : public controller_interface::Controller<hardware_interface::EffortJointInterface> {
 public:
-  HeroChassisController() = default;
+  HeroChassisController();
   ~HeroChassisController() override = default;
 
   bool init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle& root_nh, ros::NodeHandle& controller_nh) override;
   void update(const ros::Time& time, const ros::Duration& period) override;
+
+protected:
+  std::vector<double> current_velocities_;  // 当前速度
 
 private:
   // 动态参数回调函数
@@ -37,8 +41,6 @@ private:
   // 关节句柄
   hardware_interface::JointHandle left_front_joint_, right_front_joint_, left_back_joint_, right_back_joint_;
 
-  // 当前速度
-  std::vector<double> current_velocities_{4, 0.0};
 
   // 最新的 /cmd_vel 指令
   geometry_msgs::Twist current_cmd_;
@@ -48,6 +50,9 @@ private:
   ros::Subscriber joint_states_sub_;
   std::shared_ptr<dynamic_reconfigure::Server<hero_chassis_controller::PIDConfig>> dynamic_reconfigure_server_;
 };
+  // **新增的外部互斥锁**
+  boost::recursive_mutex dynamic_reconfigure_mutex_;
+
 
 }  // namespace hero_chassis_controller
 

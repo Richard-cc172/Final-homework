@@ -6,7 +6,7 @@ hero_chassis_controller:
     - left_back_wheel_joint
     - right_back_wheel_joint
   pid:
-    p: 1.0
+    p: 2.0
     i: 0.1
     d: 0.01
     i_clamp: 1.0

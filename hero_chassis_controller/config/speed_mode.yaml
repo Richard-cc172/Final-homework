@@ -1,1 +1,1 @@
-speed_mode: "global"  # 可选值： "local" 或 "global"
+speed_mode: "local"  # 可选值： "local" 或 "global"

@@ -1,5 +1,10 @@
 <launch>
+    <!-- 加载底盘参数 -->
+    <rosparam file="$(find hero_chassis_controller)/config/chassis_params.yaml" command="load" />
+
+    <!-- 加载速度模式参数 -->
     <rosparam file="$(find hero_chassis_controller)/config/speed_mode.yaml" command="load"/>
 
-    <node pkg="hero_chassis_controller" type="velocity_transform_node" name="velocity_transform_node" output="screen"/>
+    <!-- 启动合并后的主节点 -->
+    <node name="velocity_transform_node" pkg="hero_chassis_controller" type="velocity_transform_node" output="screen"/>
 </launch>

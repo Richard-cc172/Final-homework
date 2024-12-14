@@ -1,24 +1,22 @@
-# Package Name
+# hero_chassis_controller
 
 ## Overview
 
-This is a template: replace, remove, and add where required. Describe here what this package does and what it's meant
-for in a few sentences.
+The Hero Chassis Controller is a ROS package for controlling a Mecanum-wheeled robot chassis. It includes PID control for wheel velocities, odometry calculation, inverse kinematics for velocity transformations, and the ability to switch between global and local coordinate systems.
 
-**Keywords:** example, package, template
-
-Or, add some keywords to the Bitbucket or GitHub repository.
+**Keywords:** Mecanum wheel, PID control, odometry, velocity transformation
 
 ### License
 
 The source code is released under a [BSD 3-Clause license](LICENSE).
 
-**Author: Péter Fankhauser<br />
+**Author: Richard<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
-Maintainer: Péter Fankhauser, pfankhauser@anybotics.com**
+Maintainer: Richard, wang13530080747@gmail.co**m
 
-The PACKAGE NAME package has been tested under [ROS] Indigo, Melodic and Noetic on respectively Ubuntu 14.04, 18.04 and
-20.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The `hero_chassis_controller` package has been tested under ROS Noetic on Ubuntu 20.04.
+
+It is designed for educational and research purposes and may be updated frequently.
 
 [![Build Status](http://rsl-ci.ethz.ch/buildStatus/icon?job=ros_best_practices)](http://rsl-ci.ethz.ch/job/ros_best_practices/)
 
@@ -63,19 +61,18 @@ Or better, use `rosdep`:
 #### Dependencies
 
 - [Robot Operating System (ROS)](http://wiki.ros.org) (middleware for robotics),
-- [Eigen] (linear algebra library)
-
-  sudo rosdep install --from-paths src
+- control_toolbox (PID control library)
+- dynamic_reconfigure (for runtime parameter tuning)
+- tf (transformations)
 
 #### Building
 
 To build from source, clone the latest version from this repository into your catkin workspace and compile the package
 using
 
-	cd catkin_workspace/src
-	git clone https://github.com/ethz-asl/ros_best_practices.git
-	cd ../
-	rosdep install --from-paths . --ignore-src
+	cd ~/catkin_ws/src
+	git clone https://github.com/Richard-cc172/hero_chassis_controller.git
+	cd ~/catkin_ws
 	catkin_make
 
 ### Running in Docker
@@ -94,24 +91,12 @@ Now, create a catkin workspace, clone the package, build it, done!
 
 	apt-get update && apt-get install -y git
 	mkdir -p /ws/src && cd /ws/src
-	git clone https://github.com/leggedrobotics/ros_best_practices.git
+	git clone https://github.com/Richard-cc172/hero_chassis_controller.git
 	cd ..
 	rosdep install --from-path src
 	catkin_make
 	source devel/setup.bash
-	roslaunch ros_package_template ros_package_template.launch
-
-### Unit Tests
-
-Run the unit tests with
-
-	catkin_make run_tests_ros_package_template
-
-### Static code analysis
-
-Run the static code analysis with
-
-	catkin_make roslint_ros_package_template
+	roslaunch hero_chassis_controller hero_chassis_controller.launch
 
 ## Usage
 
@@ -119,69 +104,121 @@ Describe the quickest way to run this software, for example:
 
 Run the main node with
 
-	roslaunch ros_package_template ros_package_template.launch
+	roslaunch hero_chassis_controller hero_chassis_controller.launch
+
+Control the robot using:
+
+```
+rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/cmd_vel
+```
+
+To switch between local and global coordinate systems, modify the `speed_mode` parameter in the YAML configuration file and restart the node.
+
+
 
 ## Config files
 
-Config file folder/set 1
+* **chassis_params.yaml** 
 
-* **config_file_1.yaml** Shortly explain the content of this config file
+  Contains the following configurable parameters:
 
-Config file folder/set 2
+  - **`wheel_radius`**: Radius of the wheels.
+  - **`wheel_base`**: Distance between the front and rear wheels.
+  - **`wheel_track`**: Distance between the left and right wheels.
 
-* **...**
+
+
+* **pid_config.yaml** 
+
+  Contains PID parameters for wheel controllers:
+
+  - **`p`**: Proportional gain.
+
+  - **`i`**: Integral gain.
+
+  - **`d`**: Derivative gain.
+
+  - **`i_clamp`**: Integral windup limit.
+
+    
 
 ## Launch files
 
-* **launch_file_1.launch:** shortly explain what is launched (e.g standard simulation, simulation with gdb,...)
+* **hero_chassis_controller.launch** 
 
-  Argument set 1
+  **`speed_mode`**: Determines the coordinate system for velocity control (`local` or `global`).
 
-    - **`argument_1`** Short description (e.g. as commented in launch file). Default: `default_value`.
+  **`config_file`**: Path to the YAML configuration file.
 
-  Argument set 2
+  
 
-    - **`...`**
+* **velocity_transform.launch**
 
-* **...**
+  Launches the velocity transformation node.
+
+  
 
 ## Nodes
 
-### ros_package_template
+### velocity_transform_node
 
 Reads temperature measurements and computed the average.
 
+* Transforms velocity commands between global and local coordinate systems.
+
+  #### Subscribed Topics
+  
+  - **`/cmd_vel`**: ([geometry_msgs/Twist]) Input velocity commands.
+  
+  #### Published Topics
+  
+  - **`/transformed_cmd_vel`**: ([geometry_msgs/Twist]) Transformed velocity commands in the appropriate coordinate system.
+  - **`/joint_states`**: ([sensor_msgs/JointState]) Wheel speed commands.
+  
+  #### Parameters
+  
+  - **`speed_mode`**: Switch between `local` and `global` modes.
+
+### hero_chassis_controller_node
+
+Implements PID-based control for the Mecanum wheels and handles odometry calculations.
+
 #### Subscribed Topics
 
-* **`/temperature`** ([sensor_msgs/Temperature])
-
-  The temperature measurements from which the average is computed.
+- **`/cmd_vel`**: ([geometry_msgs/Twist]) Velocity commands.
+- **`/joint_states`**: ([sensor_msgs/JointState]) Current wheel states.
 
 #### Published Topics
 
-...
-
-#### Services
-
-* **`get_average`** ([std_srvs/Trigger])
-
-  Returns information about the current average. For example, you can trigger the computation from the console with
-
-  	rosservice call /ros_package_template/get_average
+- **`/odom`**: ([nav_msgs/Odometry]) Odometry data for the robot.
 
 #### Parameters
 
-* **`subscriber_topic`** (string, default: "/temperature")
+- **`chassis_params.yaml`**: Includes wheel dimensions and robot kinematics.
 
-  The name of the input topic.
+- **`pid_config.yaml`**: PID controller parameters.
 
-* **`cache_size`** (int, default: 200, min: 0, max: 1000)
+  
 
-  The size of the cache.
+## Testing
 
-### NODE_B_NAME
+Use the following commands for testing:
 
-...
+- Publish velocity commands:
+
+  ```
+  rostopic pub /cmd_vel geometry_msgs/Twist -r 10 -- '[1.0, 0.0, 0.0]' '[0.0, 0.0, 0.0]'
+  ```
+
+- Visualize odometry in RViz and verify the robot's behavior.
+
+### Tools
+
+- Use `rqt_reconfigure` to tune PID parameters in real-time.
+
+- Use `plotjuggler` to visualize the robot's odometry and wheel velocities.
+
+  
 
 ## Bugs & Feature Requests
 

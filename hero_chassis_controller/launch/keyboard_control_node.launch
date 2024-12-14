@@ -1,0 +1,8 @@
+<launch>
+    <!-- 启动键盘控制节点 -->
+    <node name="keyboard_control_node" pkg="hero_chassis_controller" type="keyboard_control_node" output="screen">
+        <!-- 参数可以在这里传递，例如线速度和角速度 -->
+        <param name="linear_speed" value="0.5" />
+        <param name="angular_speed" value="0.5" />
+    </node>
+</launch>

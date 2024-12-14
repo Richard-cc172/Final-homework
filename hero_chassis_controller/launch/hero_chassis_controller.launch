@@ -1,7 +1,0 @@
-<launch>
-    <!-- 加载底盘参数 -->
-    <param name="chassis_param_file" value="$(find hero_chassis_controller)/config/chassis_params.yaml" />
-
-    <!-- 启动控制节点 -->
-    <node name="chassis_controller_node" pkg="hero_chassis_controller" type="chassis_controller_node" output="screen" />
-</launch>
