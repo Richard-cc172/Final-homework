@@ -2,9 +2,9 @@
 
 ## Overview
 
-The Hero Chassis Controller is a ROS package for controlling a Mecanum-wheeled robot chassis. It includes PID control for wheel velocities, odometry calculation, inverse kinematics for velocity transformations, and the ability to switch between global and local coordinate systems.
+The Hero Chassis Controller is a comprehensive ROS package tailored for Mecanum-wheeled robot chassis, featuring advanced PID control, odometry calculation, and inverse kinematics for velocity transformations. This package supports real-time parameter tuning and the ability to toggle between global and local coordinate systems for versatile operational scenarios. Additionally, the package integrates seamlessly with tools like PlotJuggler and rqt_reconfigure, making it easier to visualize and fine-tune performance metrics. The updated keyboard control node offers intuitive command input for controlling the robot.
 
-**Keywords:** Mecanum wheel, PID control, odometry, velocity transformation
+**Keywords:** Mecanum wheel, PID control, odometry, velocity transformation,keyboard_control_node
 
 ### License
 
@@ -18,31 +18,7 @@ The `hero_chassis_controller` package has been tested under ROS Noetic on Ubuntu
 
 It is designed for educational and research purposes and may be updated frequently.
 
-[![Build Status](http://rsl-ci.ethz.ch/buildStatus/icon?job=ros_best_practices)](http://rsl-ci.ethz.ch/job/ros_best_practices/)
 
-![Example image](doc/example.jpg)
-
-[comment]: <> (### Publications)
-
-[comment]: <> (If you use this work in an academic context, please cite the following publication&#40;s&#41;:)
-
-[comment]: <> (* P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart: **PAPER TITLE**. IEEE/RSJ International Conference)
-
-[comment]: <> (  on Intelligent Robots and Systems &#40;IROS&#41;, 2015. &#40;[PDF]&#40;http://dx.doi.org/10.3929/ethz-a-010173654&#41;&#41;)
-
-[comment]: <> (        @inproceedings{Fankhauser2015,)
-
-[comment]: <> (            author = {Fankhauser, P\'{e}ter and Hutter, Marco},)
-
-[comment]: <> (            booktitle = {IEEE/RSJ International Conference on Intelligent Robots and Systems &#40;IROS&#41;},)
-
-[comment]: <> (            title = {{PAPER TITLE}},)
-
-[comment]: <> (            publisher = {IEEE},)
-
-[comment]: <> (            year = {2015})
-
-[comment]: <> (        })
 
 ## Installation
 
@@ -104,12 +80,14 @@ Describe the quickest way to run this software, for example:
 
 Run the main node with
 
-	roslaunch hero_chassis_controller hero_chassis_controller.launch
+	roslaunch hero_chassis_controller pid_controller.launch 
+	
+	roslaunch hero_chassis_controller velocity_transform.launch 
 
 Control the robot using:
 
 ```
-rosrun teleop_twist_keyboard teleop_twist_keyboard.py cmd_vel:=/cmd_vel
+roslaunch hero_chassis_controller keyboard_control_node.launch 
 ```
 
 To switch between local and global coordinate systems, modify the `speed_mode` parameter in the YAML configuration file and restart the node.
@@ -128,77 +106,113 @@ To switch between local and global coordinate systems, modify the `speed_mode` p
 
 
 
-* **pid_config.yaml** 
+* **chassis_controller.yaml** 
 
-  Contains PID parameters for wheel controllers:
+  Contains the following configurable parameters for the chassis controller:
 
-  - **`p`**: Proportional gain.
+  - `joints`**:** Specifies the names of the wheel joints controlled by the node:
+    - `left_front_wheel_joint`
+    - `right_front_wheel_joint`
+    - `left_back_wheel_joint`
+    - `right_back_wheel_joint`
+  - `pid`**:** Defines the PID parameters for the controller:
+    - `p`: Proportional gain (default: `2.0`).
+    - `i`: Integral gain (default: `0.1`).
+    - `d`: Derivative gain (default: `0.01`).
+    - `i_clamp`: Limits the integral windup (default: `1.0`).
+  - `joint_state_controller`**:** Publishes the joint states of the robot:
+    - `type`: Type of the controller (default: `joint_state_controller/JointStateController`).
+    - `publish_rate`: Frequency of state publishing (default: `50 Hz`).
+  
+  
+  
+  
 
-  - **`i`**: Integral gain.
+- ##### speed_mode.yaml
 
-  - **`d`**: Derivative gain.
+​	Contains the following configurable parameter for speed mode:
 
-  - **`i_clamp`**: Integral windup limit.
+​	speed_mode: Specifies the coordinate system for velocity control:
 
-    
+​		`	local`: Interprets velocity commands in the robot’s local coordinate system.
+
+​		`global` Interprets velocity commands in the global coordinate system.
+
+##### 
 
 ## Launch files
 
-* **hero_chassis_controller.launch** 
+* ##### velocity_transform.launch
 
-  **`speed_mode`**: Determines the coordinate system for velocity control (`local` or `global`).
+  Configures and launches the velocity transformation node:
 
-  **`config_file`**: Path to the YAML configuration file.
+  - **Parameters Loaded:**
+  - `chassis_params.yaml`: Defines the wheel and chassis dimensions.
+    - `speed_mode.yaml`: Specifies the coordinate system for velocity control.
 
+* **pid_controller.launch**
+
+  Sets up the PID controller for managing wheel velocities:
+
+  - **Parameters Loaded:**
+    - `chassis_controller.yaml`: Configures PID parameters for each wheel.
+    - `chassis_params.yaml`: Provides chassis dimensions.
+  
   
 
-* **velocity_transform.launch**
+- ##### keyboard_control_node.launch
 
-  Launches the velocity transformation node.
+  Launches the keyboard control node for manual teleoperation:
 
-  
+  - **Parameters:**
+    - `linear_speed`: Specifies the robot's linear speed (default: `0.5`).
+    - `angular_speed`: Specifies the robot's angular speed (default: `0.5`).
+
+
 
 ## Nodes
 
-### velocity_transform_node
-
-Reads temperature measurements and computed the average.
-
-* Transforms velocity commands between global and local coordinate systems.
-
-  #### Subscribed Topics
-  
-  - **`/cmd_vel`**: ([geometry_msgs/Twist]) Input velocity commands.
-  
-  #### Published Topics
-  
-  - **`/transformed_cmd_vel`**: ([geometry_msgs/Twist]) Transformed velocity commands in the appropriate coordinate system.
-  - **`/joint_states`**: ([sensor_msgs/JointState]) Wheel speed commands.
-  
-  #### Parameters
-  
-  - **`speed_mode`**: Switch between `local` and `global` modes.
-
 ### hero_chassis_controller_node
 
-Implements PID-based control for the Mecanum wheels and handles odometry calculations.
+Handles PID-based control for Mecanum wheels and computes odometry.
 
-#### Subscribed Topics
+- **Subscribed Topics:**
+  - `/transformed_cmd_vel`: ([geometry_msgs/Twist]) Velocity commands for each wheel.
+  - `/joint_states`: ([sensor_msgs/JointState]) Wheel speed feedback.
+- **Published Topics:**
+  - `/odom`: ([nav_msgs/Odometry]) Odometry data for the robot.
+- **Parameters:**
+  - `wheel_base`: Distance between the front and back wheels.
+  - `wheel_track`: Distance between the left and right wheels.
+  - `wheel_radius`: Radius of the wheels.
 
-- **`/cmd_vel`**: ([geometry_msgs/Twist]) Velocity commands.
-- **`/joint_states`**: ([sensor_msgs/JointState]) Current wheel states.
 
-#### Published Topics
 
-- **`/odom`**: ([nav_msgs/Odometry]) Odometry data for the robot.
+### velocity_transform_node
 
-#### Parameters
+Transforms velocity commands between global and local coordinate systems.
 
-- **`chassis_params.yaml`**: Includes wheel dimensions and robot kinematics.
+- **Subscribed Topics:**
+  - `/cmd_vel`: ([geometry_msgs/Twist]) Input velocity commands.
+- **Published Topics:**
+  - `/transformed_cmd_vel`: ([geometry_msgs/Twist]) Transformed velocity commands in the appropriate coordinate system.
+  - `/joint_states`: ([sensor_msgs/JointState]) Wheel speed commands.
+- **Parameters:**
+  - `speed_mode`: Switch between `local` and `global` modes.
 
-- **`pid_config.yaml`**: PID controller parameters.
 
-  
+
+### keyboard_control_node
+
+Handles manual control inputs from the keyboard.
+
+- **Published Topics:**
+  - `/cmd_vel`: ([geometry_msgs/Twist]) Linear and angular velocity commands based on user input.
+- **Parameters:**
+  - `linear_speed`: Configurable linear speed for forward/backward motion (default: `0.5`).
+  - `angular_speed`: Configurable angular speed for rotation (default: `0.5`).
+
+
 
 ## Testing
 
